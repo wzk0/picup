@@ -103,7 +103,7 @@ def main():
     argv=sys.argv
     init()
     if len(argv)==1 or '-h' in argv or '--help' in argv:
-        print('用法: [-h | --help] [-l | --list] [-e | --edit] [文件 <新文件名>] [-c | --choose 名称] [set 变量 新值]\n\n查看帮助\n\t$cmd -h 或 $cmd --help\n\n列出已有图床\n\t$cmd -l 或 $cmd --list\n\n编辑配置\n\t$cmd -e 或 $cmd --edit\n\n快速上传图片/文件到默认图床\n\t$cmd 文件\t\t将使用当前时间(格式: Y-m-d H:M:S)重命名远端文件.\n\t$cmd 文件 新文件名\t以指定文件名上传.\n\n使用指定的图床进行上传\n\t$cmd 文件 -c github\t使用 Github 图床.\n\n快速设定配置\n\t$cmd set default github\t设置默认图床为 Github.\n\t$cmd set github repo photo\t设置 github 图床的 repo 参数为 photo.\n\t$cmd set github user wzk0\t设置 github 图床的 user 参数为 wzk0.\n\t$cmd set github token TOKEN\t设置 github 图床的 token 参数为 TOKEN.'.replace('$cmd','picup'))
+        print('用法: picup [-h | --help] [-l | --list] [-e | --edit] [文件 <新文件名>] [-c | --choose 名称] [set 变量 新值]\n\n查看帮助\n\t$cmd -h 或 $cmd --help\n\n列出已有图床\n\t$cmd -l 或 $cmd --list\n\n编辑配置\n\t$cmd -e 或 $cmd --edit\n\n快速上传图片/文件到默认图床\n\t$cmd 文件\t\t将使用当前时间(格式: Y-m-d H:M:S)重命名远端文件.\n\t$cmd 文件 新文件名\t以指定文件名上传.\n\n使用指定的图床进行上传\n\t$cmd 文件 -c github\t使用 Github 图床.\n\n快速设定配置\n\t$cmd set default github\t设置默认图床为 Github.\n\t$cmd set github repo photo\t设置 github 图床的 repo 参数为 photo.\n\t$cmd set github user wzk0\t设置 github 图床的 user 参数为 wzk0.\n\t$cmd set github token TOKEN\t设置 github 图床的 token 参数为 TOKEN.'.replace('$cmd','picup'))
     else:
         if '-e' in argv or '--edit' in argv:
             os.system('%s %s%s'%(editor,config,data))
@@ -120,7 +120,7 @@ def main():
         elif 'set' in argv:
             try:
                 if len(argv)==2:
-                    print('用法: [set 变量 新值]\n\n快速设定配置\n\t$cmd set default github\t设置默认图床为 Github.\n\t$cmd set github repo photo\t设置 github 图床的 repo 参数为 photo.\n\t$cmd set github user wzk0\t设置 github 图床的 user 参数为 wzk0.\n\t$cmd set github token TOKEN\t设置 github 图床的 token 参数为 TOKEN.'.replace('$cmd','picup'))
+                    print('用法: picup [set 变量 新值]\n\n快速设定配置\n\t$cmd set default github\t设置默认图床为 Github.\n\t$cmd set github repo photo\t设置 github 图床的 repo 参数为 photo.\n\t$cmd set github user wzk0\t设置 github 图床的 user 参数为 wzk0.\n\t$cmd set github token TOKEN\t设置 github 图床的 token 参数为 TOKEN.'.replace('$cmd','picup'))
                 elif argv[argv.index('set')+1]=='default':
                     _set.default(argv[3])
                 else:
