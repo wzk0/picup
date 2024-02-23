@@ -13,7 +13,7 @@
 
 ## 使用
 
-> picup 只适用于 Linux 发行版, 尤其是对于 Gnome 桌面来说.
+> picup 只适用于 Linux 发行版, Gnome 桌面效果更佳.
 
 先安装以下依赖:
 
