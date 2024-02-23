@@ -23,7 +23,11 @@ sudo apt/dnf install xclip notify-send -y
 
 下载仓库中的 `picup`.
 
+编辑 `picup` 的11, 12行以指定`剪切板的格式`与`默认的编辑器`.
+
 将其移动到 `/usr/bin` 或将其所在路径export进环境.
+
+也可以将其移动到 `nautilus` 的插件文件夹以实现`右键文件即可上传到图床`.
 
 运行一次 `picup` 以生成默认的配置文件:
 
