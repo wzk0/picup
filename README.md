@@ -67,10 +67,13 @@ picup hello.jpg
 
 ```python
 def github(file,name=now):
-	# 以函数名作为图床名, 传入图片路径和可选的重命名变量. name的值默认是当前时间点(精确到秒)
+	
+    # 以函数名作为图床名, 传入图片路径和可选的重命名变量. name的值默认是当前时间点(精确到秒)
+    
     global data
     data=read_from(config+data,'data')['github']
     # 这两行的作用只是读取配置信息, 只需修改['github']与函数名保持一致即可.
+    
     pic=read_from(file,'pic')
     # 二进制读取图片文件.
 
@@ -82,6 +85,7 @@ def github(file,name=now):
     if r.status_code==201:
         success(json.loads(r.text)['content']['download_url'])
     # 成功操作
+    
     elif r.status_code==422:
         error('上传','该文件名已存在')
     elif r.status_code==401 or r.status_code==404:
@@ -99,7 +103,11 @@ def github(file,name=now):
 
 > `config+data` 无需且不能修改, 因为这是配置文件的路径.
 
+---
+
 - 提供了 `success` 函数, 将获取到的图片直链传入即可完成`复制到剪切板`, `系统通知弹窗`, `终端文字输出`.
+
+---
 
 - 提供了 `error` 函数, 传入`错误类型`与`错误具体原因`即可实现和 `success`一样的功能(没有`复制到剪切板`).
 
