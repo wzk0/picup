@@ -8,25 +8,41 @@ import json
 import getpass
 from datetime import datetime
 
-copy_goal='$url'    # 复制到剪切板的格式, $url为原图片直链
-editor='subl'       # 指定的编辑器, 用于编辑配置文件
-
 config='/home/%s/.config/picup/'%getpass.getuser()  # 配置文件路径
 data='picup.json'   # 配置文件名
 now=datetime.now().strftime("%Y-%m-%d %H:%M:%S")    # 当前时间, 用于设定默认文件名, 也可以设定此变量为随机数
 
-# 成功时进行的操作
-def success(url):
-    url=copy_goal.replace('$url',url)
-    os.system('echo "%s" | xclip -selection clipboard'%url)
-    print('上传成功! 已将内容复制到剪切板: %s'%url)
-    os.system('notify-send "上传成功!" "已将内容复制到剪切板: %s"'%url)
+# 帮助信息
+def _help():
+    print('''用法: picup [-h | --help] [-l | --list] [-e | --edit] [文件 <新文件名>] [-c | --choose 名称] [set 变量 新值]
 
-# 报错通知
-def error(do,reason):
-    print('%s失败! 原因: %s'%(do,reason))
-    os.system('notify-send "%s失败!" "原因: %s"'%(do,reason))
-    exit()
+查看帮助
+        $cmd -h 或 $cmd --help
+
+快速上传剪切板图片
+        $cmd\t\t\t识别剪切板内容并上传至默认图床
+
+列出信息
+        $cmd -l 或 $cmd --list
+
+编辑配置
+        $cmd -e 或 $cmd --edit
+
+快速上传图片/文件到默认图床
+        $cmd 文件\t\t将使用当前时间(格式: Y-m-d H:M:S)重命名远端文件.
+        $cmd 文件 新文件名\t以指定文件名上传.
+
+使用指定的图床进行上传
+        $cmd 文件 -c github\t\t使用 Github 图床.
+
+快速设定配置或插件参数: set [editor form default 插件名] 或 new [插件名]
+        $cmd set editor nano\t\t设置默认编辑器为 nano.
+        $cmd set form "[](@url)"\t设置剪切板格式为 [](@url).
+        $cmd set default github\t设置默认图床为 Github.
+        $cmd new gitee\t\t\t初始化插件 Gitee.
+        $cmd set github repo photo\t设置 github 图床的 repo 参数为 photo.
+        $cmd set github user wzk0\t设置 github 图床的 user 参数为 wzk0.
+        $cmd set github token TOKEN\t设置 github 图床的 token 参数为 TOKEN.'''.replace('$cmd','picup'))
 
 # 读取配置文件或以二进制读取图片
 def read_from(file,_type='pic'):
@@ -41,24 +57,53 @@ def read_from(file,_type='pic'):
             result=None
         return result
     except FileNotFoundError:
-        error('操作','文件不存在')
+        error('操作','文件或指令不存在')
+    except IsADirectoryError:
+        error('操作','不允许上传文件夹')
 
 # 写入文件, 往往是配置文件
 def write_in(file,thing):
     with open(file,'w')as f:
         f.write(json.dumps(thing,ensure_ascii=False))
 
+# 普通通知
+def simple(title,content):
+    print('%s! %s'%(title,content))
+    os.system('notify-send "%s!" "%s"'%(title,content))
+
+# 成功时进行的操作
+def success(url):
+    url=read_from(config+data,'data')['form'].replace('@url',url)
+    os.system('echo "%s" | xclip -selection clipboard'%url)
+    print('上传成功! 已将内容复制到剪切板: %s'%url)
+    os.system('notify-send "上传成功!" "已将内容复制到剪切板: %s"'%url)
+
+# 报错通知
+def error(do,reason):
+    print('%s失败! 原因: %s'%(do,reason))
+    os.system('notify-send "%s失败!" "原因: %s"'%(do,reason))
+    exit()
+
 # 初始化, 检查路径及配置文件是否存在
 def init():
     if not os.path.exists(config+data):
         os.system('mkdir -p %s'%config)
-        write_in(config+data,{'default':'github','github':{'name':'github','token':'','user':'','repo':''}})
-        #os.system('notify-send "尚未编辑初始配置!" "正在使用预设编辑器 %s 编辑配置..." && %s "%s%s"'%(editor,editor,config,data))
+        write_in(config+data,{'default':'github','editor':'micro','form':'@url','github':{'name':'github','token':'','user':'','repo':''}})
+        simple('初始化完成!','感谢使用 picup, 请使用 -h 查看帮助.')
     else:
         pass
 
 # 设定类
 class _set:
+    # 创建新图床
+    def new(name):
+        need=getattr(up,name).need
+        old_data=read_from(config+data,'data')
+        n_dict={n:'' for n in need}
+        n_dict['name']=name
+        old_data[name]=n_dict
+        write_in(config+data,old_data)
+        simple('设定成功','已添加新图床 %s, 请使用 set 设定其 %s 参数'%(name,', '.join(need)))
     # 用来设定默认图床
     def default(new):
         old_data=read_from(config+data,'data')
@@ -69,6 +114,11 @@ class _set:
         old_data=read_from(config+data,'data')
         old_data[repo][thing]=new
         write_in(config+data,old_data)
+    # 设定其他项目
+    def other_item(old,new):
+        old_data=read_from(config+data,'data')
+        old_data[old]=new
+        write_in(config+data,old_data)
 
 # 上传类
 class up:
@@ -77,41 +127,77 @@ class up:
         global data
         func=read_from(config+data,'data')['default']
         try:
-            getattr(up,func)(file,name=name)
+            getattr(up,func).up(file,name=name)
         except AttributeError:
             error('操作','此默认图床不存在')
+
     # github 图床插件
-    def github(file,name=now):
-        global data
-        data=read_from(config+data,'data')['github']
-        pic=read_from(file,'pic')
-        headers={"Authorization": "Bearer %s"%data['token'],"Accept": "application/vnd.github+json"}
-        url='https://api.github.com/repos/%s/%s/contents/%s'%(data['user'],data['repo'],name+'.'+file.split('.')[-1])
-        r=requests.put(url,headers=headers,json={"message":name,"content":pic})
-        if r.status_code==201:
-            success(json.loads(r.text)['content']['download_url'])
-        elif r.status_code==422:
-            error('上传','该文件名已存在')
-        elif r.status_code==401 or r.status_code==404:
-            error('上传','未设定相关变量, 可使用 set 快速设定, 或使用 -e 进入编辑模式')
-        else:
-            error('上传','%s(错误状态码)'%r.status_code)
+    class github:
+        need=['token','user','repo']
+        def up(file,name=now):
+            global data
+            info=read_from(config+data,'data')['github']
+            pic=read_from(file,'pic')
+            headers={"Authorization": "Bearer %s"%info['token'],"Accept": "application/vnd.github+json"}
+            url='https://api.github.com/repos/%s/%s/contents/%s'%(info['user'],info['repo'],name+'.'+file.split('.')[-1])
+            r=requests.put(url,headers=headers,json={"message":name,"content":pic})
+            if r.status_code==201:
+                success(json.loads(r.text)['content']['download_url'])
+            elif r.status_code==422:
+                error('上传','该文件名已存在')
+            elif r.status_code==401 or r.status_code==404:
+                error('上传','未设定相关变量, 可使用 set 快速设定, 或使用 -e 进入编辑模式')
+            else:
+                error('上传','%s(错误状态码)'%r.status_code)
+
+    # gitee 图床插件
+    class gitee:
+        need=['token','user','repo']
+        def up(file,name=now):
+            global data
+            info=read_from(config+data,'data')['gitee']
+            pic=read_from(file,'pic')
+            headers={"Content-Type": "application/json;charset=UTF-8"}
+            url='https://gitee.com/api/v5/repos/%s/%s/contents/%s'%(info['user'],info['repo'],name+'.'+file.split('.')[-1])
+            r=requests.post(url,headers=headers,json={"access_token":info['token'],"message":name,"content":pic})
+            if r.status_code==201:
+                success(json.loads(r.text)['content']['download_url'].replace(' ','%20'))
+            elif r.status_code==422:
+                error('上传','该文件名已存在')
+            elif r.status_code==401 or r.status_code==404:
+                error('上传','未设定相关变量, 可使用 set 快速设定, 或使用 -e 进入编辑模式')
+            else:
+                error('上传','%s(错误状态码)'%r.status_code)
 
 # 主函数
 def main():
     global data
     argv=sys.argv
     init()
-    if len(argv)==1 or '-h' in argv or '--help' in argv:
-        print('用法: picup [-h | --help] [-l | --list] [-e | --edit] [文件 <新文件名>] [-c | --choose 名称] [set 变量 新值]\n\n查看帮助\n\t$cmd -h 或 $cmd --help\n\n列出已有图床\n\t$cmd -l 或 $cmd --list\n\n编辑配置\n\t$cmd -e 或 $cmd --edit\n\n快速上传图片/文件到默认图床\n\t$cmd 文件\t\t将使用当前时间(格式: Y-m-d H:M:S)重命名远端文件.\n\t$cmd 文件 新文件名\t以指定文件名上传.\n\n使用指定的图床进行上传\n\t$cmd 文件 -c github\t使用 Github 图床.\n\n快速设定配置\n\t$cmd set default github\t设置默认图床为 Github.\n\t$cmd set github repo photo\t设置 github 图床的 repo 参数为 photo.\n\t$cmd set github user wzk0\t设置 github 图床的 user 参数为 wzk0.\n\t$cmd set github token TOKEN\t设置 github 图床的 token 参数为 TOKEN.'.replace('$cmd','picup'))
+    if len(argv)==1:
+        clip=os.popen('xclip -selection clipboard -o').read()
+        if os.path.exists(clip):
+            simple('注意','当前剪切板为存在的文件路径, 正在上传...')
+            up.default(clip)
+        elif 'image/' in os.popen('xclip -selection clipboard -t TARGETS -o').read():
+            simple('注意','当前剪切板为图片, 正在上传...')
+            os.system('xclip -selection clipboard -t image/png -o > .tmp.png')
+            up.default('.tmp.png')
+            os.system('rm .tmp.png')
+        else:
+            simple('注意','当前剪切板不是图片或存在的文件路径, 不会进行任何操作. 请使用 -h 查看帮助.')
+    elif '-h' in argv or '--help' in argv:
+        _help()
     else:
         if '-e' in argv or '--edit' in argv:
-            os.system('%s %s%s'%(editor,config,data))
+            os.system('%s %s%s'%(read_from(config+data,'data')['editor'],config,data))
         elif '-l' in argv or '--list' in argv:
             data=read_from(config+data,'data')
             _list=list(data.keys())
-            print('default\n\t%s\n'%data['default'])
+            print('default: %s\neditor:  %s\nform:    %s\n'%(data['default'],data['editor'],data['form']))
             _list.remove('default')
+            _list.remove('editor')
+            _list.remove('form')
             for l in _list:
                 result=[]
                 for dl in list(data[l].keys()):
@@ -120,9 +206,13 @@ def main():
         elif 'set' in argv:
             try:
                 if len(argv)==2:
-                    print('用法: picup [set 变量 新值]\n\n快速设定配置\n\t$cmd set default github\t设置默认图床为 Github.\n\t$cmd set github repo photo\t设置 github 图床的 repo 参数为 photo.\n\t$cmd set github user wzk0\t设置 github 图床的 user 参数为 wzk0.\n\t$cmd set github token TOKEN\t设置 github 图床的 token 参数为 TOKEN.'.replace('$cmd','picup'))
+                    _help()
+                elif argv[argv.index('set')+1]=='new':
+                    _set.new(argv[argv.index('set')+2])
                 elif argv[argv.index('set')+1]=='default':
                     _set.default(argv[3])
+                elif argv[argv.index('set')+1] in ['editor','form']:
+                    _set.other_item(argv[argv.index('set')+1],argv[argv.index('set')+2])
                 else:
                     _set.other(argv[argv.index('set')+1],argv[argv.index('set')+2],argv[argv.index('set')+3])
             except IndexError:
@@ -142,9 +232,9 @@ def main():
             argv=argv[1:]
             try:
                 if len(argv)==2:
-                    getattr(up,choose)(argv[0],argv[1])
+                    getattr(up,choose).up(argv[0],argv[1])
                 elif len(argv)==1:
-                    getattr(up,choose)(argv[0])
+                    getattr(up,choose).up(argv[0])
                 else:
                     error('上传','过多或过少的无效参数')
             except AttributeError:
