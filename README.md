@@ -1,6 +1,6 @@
 # picup
 
-一个支持插件化的终端操作的图床程序. 可以大概视为 PicGo 的简陋终端版?
+一个支持插件化的终端操作的图床程序. 可以大概视为 PicGo 的终端版?
 
 ![](https://raw.githubusercontent.com/wzk0/photo/main/2024-02-24%2018%3A12%3A25.png)
 
